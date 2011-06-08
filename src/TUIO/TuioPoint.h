@@ -50,6 +50,10 @@ namespace TUIO {
 		 */
 		float ypos;
 		/**
+		 * X coordinate, representated as a floating point value in a range of 0..1  
+		 */
+		float zpos;
+		/**
 		 * The time stamp of the last update represented as TuioTime (time since session start)
 		 */
 		TuioTime currentTime;
@@ -63,9 +67,10 @@ namespace TUIO {
 		 * The default constructor takes no arguments and sets   
 		 * its coordinate attributes to zero and its time stamp to the current session time.
 		 */
-		TuioPoint (float xp, float yp) {
+		TuioPoint (float xp, float yp, float zp = 0) {
 			xpos = xp;
 			ypos = yp;
+			zpos = zp;
 			currentTime = TuioTime::getSessionTime();
 			startTime = currentTime;
 		};
@@ -78,9 +83,10 @@ namespace TUIO {
 		 * @param	xp	the X coordinate to assign
 		 * @param	yp	the Y coordinate to assign
 		 */
-		TuioPoint (TuioTime ttime, float xp, float yp) {
+		TuioPoint (TuioTime ttime, float xp, float yp, float zp = 0) {
 			xpos = xp;
 			ypos = yp;
+			zpos = zp;
 			currentTime = ttime;
 			startTime = currentTime;
 		};
@@ -94,6 +100,7 @@ namespace TUIO {
 		TuioPoint (TuioPoint *tpoint) {
 			xpos = tpoint->getX();
 			ypos = tpoint->getY();
+			ypos = tpoint->getZ();
 			currentTime = TuioTime::getSessionTime();
 			startTime = currentTime;
 		};
@@ -121,9 +128,10 @@ namespace TUIO {
 		 * @param	xp	the X coordinate to assign
 		 * @param	yp	the Y coordinate to assign
 		 */		
-		void update (float xp, float yp) {
+		void update (float xp, float yp, float zp = 0) {
 			xpos = xp;
 			ypos = yp;
+			zpos = zp;
 		};		
 		
 		/**
@@ -134,9 +142,10 @@ namespace TUIO {
 		 * @param	xp	the X coordinate to assign
 		 * @param	yp	the Y coordinate to assign
 		 */
-		void update (TuioTime ttime, float xp, float yp) {
+		void update (TuioTime ttime, float xp, float yp, float zp = 0) {
 			xpos = xp;
 			ypos = yp;
+			zpos = zp;
 			currentTime = ttime;
 		};
 
@@ -156,6 +165,14 @@ namespace TUIO {
 		float getY() {
 			return ypos;
 		};
+
+		/**
+		 * Returns the Z coordinate of this TuioPoint. 
+		 * @return	the Z coordinate of this TuioPoint
+		 */
+		float getZ() {
+			return zpos;
+		};
 		
 		/**
 		 * Returns the distance to the provided coordinates 
@@ -164,10 +181,11 @@ namespace TUIO {
 		 * @param	yp	the Y coordinate of the distant point
 		 * @return	the distance to the provided coordinates
 		 */
-		float getDistance(float xp, float yp) {
+		float getDistance(float xp, float yp, float zp = 0) {
 			float dx = xpos-xp;
 			float dy = ypos-yp;
-			return sqrtf(dx*dx+dy*dy);
+			float dz = zpos-zp;
+			return sqrtf(dx*dx+dy*dy+dz*dz);
 		}
 		
 		/**
@@ -177,7 +195,7 @@ namespace TUIO {
 		 * @return	the distance to the provided TuioPoint
 		 */
 		float getDistance(TuioPoint *tpoint) {
-			return getDistance(tpoint->getX(),tpoint->getY());
+			return getDistance(tpoint->getX(),tpoint->getY(),tpoint->getZ());
 		}
 		
 		/**
@@ -187,6 +205,7 @@ namespace TUIO {
 		 * @param	yp	the Y coordinate of the distant point
 		 * @return	the angle to the provided coordinates
 		 */
+		// TODO
 		 float getAngle(float xp, float yp) {
 			float side = xpos-xp;
 			float height = ypos-yp;

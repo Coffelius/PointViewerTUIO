@@ -83,7 +83,7 @@ SessionState g_SessionState = NOT_IN_SESSION;
 
 void CleanupExit()
 {
-	
+
 	//delete tuioServer;
 	g_Context.Shutdown();
 
@@ -186,7 +186,7 @@ void glutKeyboard (unsigned char key, int x, int y)
 		// Toggle smoothing
 		if (g_fSmoothing == 0)
 			g_fSmoothing = 0.1;
-		else 
+		else
 			g_fSmoothing = 0;
 		g_HandsGenerator.SetSmoothing(g_fSmoothing);
 		break;
@@ -218,7 +218,7 @@ void glInit (int * pargc, char ** argv)
 #endif
 
 // xml to initialize OpenNI
-#define SAMPLE_XML_PATH "Sample-Tracking.xml"
+#define SAMPLE_XML_PATH "niConfig.xml"
 
 int main(int argc, char ** argv)
 {
@@ -242,7 +242,7 @@ int main(int argc, char ** argv)
 
 	g_pSessionManager->RegisterSession(NULL, SessionStarting, SessionEnding, FocusProgress);
 
-	g_pDrawer = new PointDrawerTUIO(20, g_DepthGenerator); 
+	g_pDrawer = new PointDrawerTUIO(20, g_DepthGenerator);
 	g_pFlowRouter = new XnVFlowRouter;
 	g_pFlowRouter->SetActive(g_pDrawer);
 

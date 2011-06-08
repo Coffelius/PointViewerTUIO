@@ -70,7 +70,7 @@ void TuioClient::unlockCursorList() {
 #endif		
 }
 
-TuioClient::TuioClient(int port)
+TuioClient::TuioClient(int port, bool mode3d)
 : socket      (NULL)
 , currentFrame(-1)
 , maxCursorID (-1)
@@ -78,6 +78,8 @@ TuioClient::TuioClient(int port)
 , locked      (false)
 , connected   (false)
 {
+	this->mode3d = mode3d;
+
 	try {
 		socket = new UdpListeningReceiveSocket(IpEndpointName( IpEndpointName::ANY_ADDRESS, port ), this );
 	} catch (std::exception &e) { 
@@ -431,7 +433,188 @@ void TuioClient::ProcessMessage( const ReceivedMessage& msg, const IpEndpointNam
 				}
 				
 				frameCursors.clear();
-			}
+			} 
+		} else if( strcmp( msg.AddressPattern(), "/tuio/3Dcur" ) == 0 ) {
+			const char* cmd;
+			args >> cmd;
+			
+			if (strcmp(cmd,"set")==0) {	
+
+				int32 s_id;
+				float xpos, ypos, zpos, xspeed, yspeed, zspeed, maccel;				
+				args >> s_id >> xpos >> ypos >> zpos >> xspeed >> yspeed >> zspeed >> maccel;
+				
+				lockCursorList();
+				std::list<TuioCursor*>::iterator tcur;
+				for (tcur=cursorList.begin(); tcur!= cursorList.end(); tcur++)
+					if((*tcur)->getSessionID()==(long)s_id) break;
+				
+				if (tcur==cursorList.end()) {
+									
+					TuioCursor *addCursor = new TuioCursor((long)s_id,-1,xpos,ypos,zpos);
+					frameCursors.push_back(addCursor);
+
+				} else if ( ((*tcur)->getX()!=xpos) || ((*tcur)->getY()!=ypos) || ((*tcur)->getZ()!=zpos) || ((*tcur)->getXSpeed()!=xspeed) || ((*tcur)->getYSpeed()!=yspeed) || ((*tcur)->getZSpeed()!=zspeed) || ((*tcur)->getMotionAccel()!=maccel) ) {
+
+					TuioCursor *updateCursor = new TuioCursor((long)s_id,(*tcur)->getCursorID(),xpos,ypos,zpos);
+					updateCursor->update(xpos,ypos,zpos,xspeed,yspeed,zspeed,maccel);
+					frameCursors.push_back(updateCursor);
+
+				}
+				unlockCursorList();
+				
+			} else if (strcmp(cmd,"alive")==0) {
+				
+				int32 s_id;
+				aliveCursorList.clear();
+				while(!args.Eos()) {
+					args >> s_id;
+					aliveCursorList.push_back((long)s_id);
+				}
+				
+			} else if( strcmp( cmd, "fseq" ) == 0 ){
+				
+				int32 fseq;
+				args >> fseq;
+				bool lateFrame = false;
+				if (fseq>0) {
+					if (fseq>currentFrame) currentTime = TuioTime::getSessionTime();
+					if ((fseq>=currentFrame) || ((currentFrame-fseq)>100)) currentFrame = fseq;
+					else lateFrame = true;
+				}  else if ((TuioTime::getSessionTime().getTotalMilliseconds()-currentTime.getTotalMilliseconds())>100) {
+					currentTime = TuioTime::getSessionTime();
+				}
+			
+				if (!lateFrame) {
+					
+					lockCursorList();
+					// find the removed cursors first
+					for (std::list<TuioCursor*>::iterator tcur=cursorList.begin(); tcur != cursorList.end(); tcur++) {
+						std::list<long>::iterator iter = find(aliveCursorList.begin(), aliveCursorList.end(), (*tcur)->getSessionID());
+							
+						if (iter == aliveCursorList.end()) {
+							(*tcur)->remove(currentTime);
+							frameCursors.push_back(*tcur);
+						}
+					}
+					unlockCursorList();
+					
+					for (std::list<TuioCursor*>::iterator iter=frameCursors.begin(); iter != frameCursors.end(); iter++) {
+						TuioCursor *tcur = (*iter);
+						
+						int c_id = -1;
+						TuioCursor *frameCursor = NULL;
+						switch (tcur->getTuioState()) {
+							case TUIO_REMOVED:
+								frameCursor = tcur;
+								frameCursor->remove(currentTime);
+	
+								for (std::list<TuioListener*>::iterator listener=listenerList.begin(); listener != listenerList.end(); listener++)
+									(*listener)->removeTuioCursor(frameCursor);
+
+								lockCursorList();
+								for (std::list<TuioCursor*>::iterator delcur=cursorList.begin(); delcur!=cursorList.end(); delcur++) {
+									if((*delcur)->getSessionID()==frameCursor->getSessionID()) {
+										cursorList.erase(delcur);
+										break;
+									}
+								}
+
+								if (frameCursor->getCursorID()==maxCursorID) {
+									maxCursorID = -1;
+									delete frameCursor;
+									
+									if (cursorList.size()>0) {
+										std::list<TuioCursor*>::iterator clist;
+										for (clist=cursorList.begin(); clist != cursorList.end(); clist++) {
+											c_id = (*clist)->getCursorID();
+											if (c_id>maxCursorID) maxCursorID=c_id;
+										}
+			
+										freeCursorBuffer.clear();
+										for (std::list<TuioCursor*>::iterator flist=freeCursorList.begin(); flist != freeCursorList.end(); flist++) {
+											TuioCursor *freeCursor = (*flist);
+											if (freeCursor->getCursorID()>maxCursorID) delete freeCursor;
+											else freeCursorBuffer.push_back(freeCursor);
+										}	
+										freeCursorList = freeCursorBuffer;
+
+									} else {
+										for (std::list<TuioCursor*>::iterator flist=freeCursorList.begin(); flist != freeCursorList.end(); flist++) {
+											TuioCursor *freeCursor = (*flist);
+											delete freeCursor;
+										}
+										freeCursorList.clear();
+									}
+								} else if (frameCursor->getCursorID()<maxCursorID) {
+									freeCursorList.push_back(frameCursor);
+								} 
+								
+								unlockCursorList();
+								break;
+							case TUIO_ADDED:
+								
+								lockCursorList();
+								c_id = (int)cursorList.size();
+								if (((int)(cursorList.size())<=maxCursorID) && ((int)(freeCursorList.size())>0)) {
+									std::list<TuioCursor*>::iterator closestCursor = freeCursorList.begin();
+									
+									for(std::list<TuioCursor*>::iterator iter = freeCursorList.begin();iter!= freeCursorList.end(); iter++) {
+										if((*iter)->getDistance(tcur)<(*closestCursor)->getDistance(tcur)) closestCursor = iter;
+									}
+									
+									TuioCursor *freeCursor = (*closestCursor);
+									c_id = freeCursor->getCursorID();
+									freeCursorList.erase(closestCursor);
+									delete freeCursor;
+								} else maxCursorID = c_id;									
+								
+								frameCursor = new TuioCursor(currentTime,tcur->getSessionID(),c_id,tcur->getX(),tcur->getY(), tcur->getZ());
+								cursorList.push_back(frameCursor);
+								
+								delete tcur;
+								unlockCursorList();
+								
+								for (std::list<TuioListener*>::iterator listener=listenerList.begin(); listener != listenerList.end(); listener++)
+									(*listener)->addTuioCursor(frameCursor);
+								
+								break;
+							default:
+								
+								lockCursorList();
+								std::list<TuioCursor*>::iterator iter;
+								for (iter=cursorList.begin(); iter != cursorList.end(); iter++) {
+									if((*iter)->getSessionID()==tcur->getSessionID()) {
+										frameCursor = (*iter);
+										break;
+									}
+								}
+								
+								if ( (tcur->getX()!=frameCursor->getX() && tcur->getXSpeed()==0) || (tcur->getY()!=frameCursor->getY() && tcur->getYSpeed()==0) || (tcur->getZ()!=frameCursor->getZ() && tcur->getZSpeed()==0) )
+									frameCursor->update(currentTime,tcur->getX(),tcur->getY(),tcur->getZ());
+								else
+									frameCursor->update(currentTime,tcur->getX(),tcur->getY(),tcur->getZ(),tcur->getXSpeed(),tcur->getYSpeed(),tcur->getZSpeed(),tcur->getMotionAccel());
+						
+								delete tcur;
+								unlockCursorList();
+								
+								for (std::list<TuioListener*>::iterator listener=listenerList.begin(); listener != listenerList.end(); listener++)
+									(*listener)->updateTuioCursor(frameCursor);
+						}	
+					}
+					
+					for (std::list<TuioListener*>::iterator listener=listenerList.begin(); listener != listenerList.end(); listener++)
+						(*listener)->refresh(currentTime);
+					
+				} else {
+					for (std::list<TuioCursor*>::iterator iter=frameCursors.begin(); iter != frameCursors.end(); iter++) {
+						TuioCursor *tcur = (*iter);
+						delete tcur;
+					}
+				}
+				
+				frameCursors.clear();
+			} 
 		}
 	} catch( Exception& e ){
 		std::cerr << "error parsing TUIO message: "<< msg.AddressPattern() <<  " - " << e.what() << std::endl;

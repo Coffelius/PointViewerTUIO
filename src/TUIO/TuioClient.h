@@ -67,7 +67,7 @@ namespace TUIO {
 		 *
 		 * @param  port  the incoming TUIO UDP port number, defaults to 3333 if no argument is provided
 		 */
-		TuioClient(int port=3333);
+		TuioClient(int port=3333, bool mode3d = false);
 
 		/**
 		 * The destructor is doing nothing in particular. 
@@ -92,6 +92,8 @@ namespace TUIO {
 		 * @return	true if this TuioClient is currently connected
 		 */
 		bool isConnected() { return connected; }
+
+		bool isMode3d() { return mode3d; }
 				
 		/**
 		 * Adds the provided TuioListener to the list of registered TUIO event listeners
@@ -192,6 +194,8 @@ namespace TUIO {
 			
 		std::list<TuioCursor*> freeCursorList, freeCursorBuffer;
 		int maxCursorID;
+
+		bool mode3d;
 		
 #ifndef WIN32
 		pthread_t thread;

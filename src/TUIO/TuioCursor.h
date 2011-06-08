@@ -52,7 +52,7 @@ namespace TUIO {
 		 * @param	xp	the X coordinate to assign
 		 * @param	yp	the Y coordinate to assign
 		 */
-		TuioCursor (TuioTime ttime, long si, int ci, float xp, float yp):TuioContainer(ttime,si,xp,yp) {
+		TuioCursor (TuioTime ttime, long si, int ci, float xp, float yp, float zp=0):TuioContainer(ttime,si,xp,yp,zp) {
 			cursor_id = ci;
 		};
 
@@ -65,7 +65,7 @@ namespace TUIO {
 		 * @param	xp	the X coordinate to assign
 		 * @param	yp	the Y coordinate to assign
 		 */
-		TuioCursor (long si, int ci, float xp, float yp):TuioContainer(si,xp,yp) {
+		TuioCursor (long si, int ci, float xp, float yp, float zp=0):TuioContainer(si,xp,yp,zp) {
 			cursor_id = ci;
 		};
 		
