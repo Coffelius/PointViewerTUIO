@@ -1,5 +1,5 @@
 //added for OSX compilation
-#define USE_GLUT
+//#define USE_GLUT
 
 /****************************************************************************
 *                                                                           *
@@ -31,7 +31,7 @@
 		#include <GL/glut.h>
 	#endif
 #else
-	#include "opengles.h"
+//	#include "opengles.h"
 #endif
 
 // Constructor. Receives the number of previous positions to store per hand,
@@ -112,13 +112,14 @@ unsigned int getClosestPowerOfTwo(unsigned int n)
 
 	return m;
 }
+#ifdef USE_GLUT
 GLuint initTexture(void** buf, int& width, int& height)
 {
 	GLuint texID = 0;
 	glGenTextures(1,&texID);
 
 	width = getClosestPowerOfTwo(width);
-	height = getClosestPowerOfTwo(height); 
+	height = getClosestPowerOfTwo(height);
 	*buf = new unsigned char[width*height*4];
 	glBindTexture(GL_TEXTURE_2D,texID);
 
@@ -153,7 +154,7 @@ void DrawTexture(float topLeftX, float topLeftY, float bottomRightX, float botto
 
 void DrawDepthMap(const xn::DepthMetaData& dm)
 {
-	static bool bInitialized = false;	
+	static bool bInitialized = false;
 	static GLuint depthTexID;
 	static unsigned char* pDepthTexBuf;
 	static int texWidth, texHeight;
@@ -244,7 +245,7 @@ void DrawDepthMap(const xn::DepthMetaData& dm)
 				{
 					nHistValue = g_pDepthHist[nValue];
 
-					pDestImage[0] = nHistValue; 
+					pDestImage[0] = nHistValue;
 					pDestImage[1] = nHistValue;
 					pDestImage[2] = nHistValue;
 				}
@@ -269,7 +270,7 @@ void DrawDepthMap(const xn::DepthMetaData& dm)
 	glColor4f(0.5,0.5,0.5,1);
 
 	glEnable(GL_TEXTURE_2D);
-	DrawTexture(dm.XRes(),dm.YRes(),0,0);	
+	DrawTexture(dm.XRes(),dm.YRes(),0,0);
 	glDisable(GL_TEXTURE_2D);
 }
 
@@ -331,7 +332,7 @@ void XnVPointDrawer::Draw() const
 			m_pfPositionBuffer[3*i + 1] = pt.Y;
 			m_pfPositionBuffer[3*i + 2] = 0;//pt.Z();
 		}
-		
+
 		// Set color
 		XnUInt32 nColor = Id % nColors;
 		XnUInt32 nSingle = GetPrimaryID();
@@ -351,6 +352,7 @@ void XnVPointDrawer::Draw() const
 		glFlush();
 	}
 }
+#endif
 
 // Handle a new Message
 void XnVPointDrawer::Update(XnVMessage* pMessage)
@@ -363,20 +365,28 @@ void XnVPointDrawer::Update(XnVMessage* pMessage)
 		// Draw depth map
 		xn::DepthMetaData depthMD;
 		m_DepthGenerator.GetMetaData(depthMD);
+#ifdef USE_GLUT
 		DrawDepthMap(depthMD);
+		#endif
+
 	}
 	if (m_bFrameID)
 	{
 		// Print out frame ID
 		xn::DepthMetaData depthMD;
 		m_DepthGenerator.GetMetaData(depthMD);
+		#ifdef USE_GLUT
 		DrawFrameID(depthMD.FrameID());
+		#endif
 	}
 
 	// Draw hands
+	#ifdef USE_GLUT
 	Draw();
+	#endif
 }
 
+#ifdef USE_GLUT
 void PrintSessionState(SessionState eState)
 {
 	glColor4f(1,0,1,1);
@@ -395,3 +405,4 @@ void PrintSessionState(SessionState eState)
 
 	glPrintString(GLUT_BITMAP_HELVETICA_18, strLabel);
 }
+#endif

@@ -1,5 +1,5 @@
 //added for OSX compilation
-#define USE_GLUT
+//#define USE_GLUT
 
 /****************************************************************************
 *                                                                           *
@@ -115,7 +115,7 @@ void XN_CALLBACK_TYPE NoHands(void* UserCxt)
 		g_SessionState = QUICK_REFOCUS;
 	}
 }
-
+#ifdef USE_GLUT
 // this function is called each frame
 void glutDisplay (void)
 {
@@ -150,7 +150,7 @@ void glutDisplay (void)
 	glutSwapBuffers();
 	#endif
 }
-
+#endif
 #ifdef USE_GLUT
 void glutIdle (void)
 {
@@ -262,5 +262,12 @@ int main(int argc, char ** argv)
 	glutMainLoop();
 
 	#else
+	while(1) {
+			// Read next available data
+		g_Context.WaitAndUpdateAll();
+		// Update NITE tree
+		g_pSessionManager->Update(&g_Context);
+		//PrintSessionState(g_SessionState);
+	}
 	#endif
 }
