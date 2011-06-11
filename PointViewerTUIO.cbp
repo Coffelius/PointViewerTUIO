@@ -38,15 +38,30 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O3" />
+					<Add directory="/usr/include/nite" />
+					<Add directory="/usr/include/ni" />
+					<Add directory="/usr/include/opencv" />
+					<Add directory="src/TUIO" />
+					<Add directory="src/oscpack" />
+					<Add directory="src" />
+					<Add directory="src/TUIO_CPP/oscpack" />
+					<Add directory="src/TUIO_CPP/TUIO" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add library="glut" />
+					<Add library="OpenNI" />
+					<Add library="XnVNite_1_3_1" />
+					<Add library="cv" />
+					<Add library="highgui" />
 				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="lib/ofxCvKalman.cpp" />
+		<Unit filename="lib/ofxCvKalman.h" />
 		<Unit filename="src/PointDrawer.cpp" />
 		<Unit filename="src/PointDrawer.h" />
 		<Unit filename="src/PointDrawerTUIO.cpp" />

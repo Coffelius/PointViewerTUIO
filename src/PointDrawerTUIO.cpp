@@ -23,6 +23,39 @@
 #include "PointDrawerTUIO.h"
 using namespace TUIO;
 
+
+void PointDrawerTUIO::initKalman(void) {
+    memset(tuioPointSmoothed, 0, 32*3*sizeof(ofxCvKalman*));
+}
+
+bool PointDrawerTUIO::updateKalman(int id, XnPoint3D &p) {
+	if (id>=32) return false;
+	if(tuioPointSmoothed[id*3] == NULL) {
+	    printf("Creado");
+		tuioPointSmoothed[id*3] = new ofxCvKalman(p.X);
+		tuioPointSmoothed[id*3+1] = new ofxCvKalman(p.Y);
+		//tuioPointSmoothed[id*3+2] = new ofxCvKalman(p.z);
+	} else {
+            p.X=tuioPointSmoothed[id*3]->correct(p.X);
+            p.Y=tuioPointSmoothed[id*3+1]->correct(p.Y);
+		//p.z=tuioPointSmoothed[id*3+2]->correct(p.z);
+		printf("Corregido");
+	}
+
+	return true;
+}
+void PointDrawerTUIO::clearKalman(int id) {
+	if (id>=32) return;
+	if(tuioPointSmoothed[id*3]) {
+		delete tuioPointSmoothed[id*3];
+		tuioPointSmoothed[id*3] = NULL;
+		delete tuioPointSmoothed[id*3+1];
+		tuioPointSmoothed[id*3+1] = NULL;
+		//delete tuioPointSmoothed[id*3+2];
+		//tuioPointSmoothed[id*3+2] = NULL;
+	}
+}
+
 // Constructor. Receives the number of previous positions to store per hand,
 // and a source for depth map
 PointDrawerTUIO::PointDrawerTUIO(XnUInt32 nHistory, xn::DepthGenerator depthGenerator, const char *host, int port) :
@@ -34,6 +67,9 @@ PointDrawerTUIO::PointDrawerTUIO(XnUInt32 nHistory, xn::DepthGenerator depthGene
 	if ((strcmp(host,"default")==0) && (port==0)) tuioServer = new TuioServer();
 	else tuioServer = new TuioServer(host, port);
 	currentTime = TuioTime::getSessionTime();
+
+
+	initKalman();
 
 }
 
@@ -59,9 +95,9 @@ void PointDrawerTUIO::OnPointCreate(const XnVHandPointContext* cxt)
 	if(cursor==NULL){
 		XnPoint3D pt(cxt->ptPosition);
 		m_DepthGenerator.ConvertRealWorldToProjective(1, &pt, &pt);
-		float x = pt.X/width;
-		float y = pt.Y/height;
-		cursor = tuioServer->addTuioCursor(x,y);
+		pt.X/=width;
+		pt.Y/=height;
+		cursor = tuioServer->addTuioCursor(0.5+(pt.X-0.5)*2,0.5+(pt.Y-0.5)*2);
 	}
 	XnVPointDrawer::OnPointCreate(cxt);
 }
@@ -72,19 +108,27 @@ void PointDrawerTUIO::OnPointUpdate(const XnVHandPointContext* cxt)
 	if (cursor!=NULL && cursor->getTuioTime()!=currentTime){
 		XnPoint3D pt(cxt->ptPosition);
 		m_DepthGenerator.ConvertRealWorldToProjective(1, &pt, &pt);
-		float x = pt.X/width;
-		float y = pt.Y/height;
-		tuioServer->updateTuioCursor(cursor,x,y);
+		pt.X/=width;
+		pt.Y/=height;
+		//cursor->update(cursor,0.5+(pt.X-0.5)*2,0.5+(y-0.5)*2);
+        updateKalman(cursor->getCursorID(), pt);
+        //tuioServer->updateCursor(cursor);
+		tuioServer->updateTuioCursor(cursor,0.5+(pt.X-0.5)*2,0.5+(pt.Y-0.5)*2);
 	}
 	XnVPointDrawer::OnPointUpdate(cxt);
+
+
 }
 
 // Handle destruction of an existing hand
 void PointDrawerTUIO::OnPointDestroy(XnUInt32 nID)
 {
 	if (cursor!=NULL){
+        clearKalman(cursor->getCursorID());
 		tuioServer->removeTuioCursor(cursor);
 		cursor = NULL;
 	}
 	XnVPointDrawer::OnPointDestroy(nID);
+
+
 }
