@@ -22,6 +22,8 @@
 					<Add directory="src" />
 					<Add directory="src/TUIO_CPP/oscpack" />
 					<Add directory="src/TUIO_CPP/TUIO" />
+					<Add directory="lib" />
+					<Add directory="/opt/local/include" />
 				</Compiler>
 				<Linker>
 					<Add library="glut" />
@@ -46,6 +48,8 @@
 					<Add directory="src" />
 					<Add directory="src/TUIO_CPP/oscpack" />
 					<Add directory="src/TUIO_CPP/TUIO" />
+					<Add directory="lib" />
+					<Add directory="/opt/local/include" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
